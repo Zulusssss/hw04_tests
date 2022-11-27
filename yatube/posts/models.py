@@ -45,7 +45,7 @@ class Post(models.Model):
 
     class Meta:
         ordering = ['-pub_date']
-    
+
     def __str__(self):
         NUMBER_OF_CHAR = 15
         return self.text[:NUMBER_OF_CHAR]

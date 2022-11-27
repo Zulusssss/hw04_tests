@@ -116,7 +116,6 @@ def post_edit(request, post_id):
             form = PostForm(request.POST, instance=post)
 
             if form.is_valid():
-                post_clone = Post.objects.get(pk=post_id)
                 form.save()
                 return redirect('posts:post_detail', post_id)
 

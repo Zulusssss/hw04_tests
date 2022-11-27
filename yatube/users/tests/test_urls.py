@@ -1,11 +1,12 @@
 from django.test import TestCase, Client
 from http import HTTPStatus
 
+
 class PostURLTests(TestCase):
 
     def setUp(self):
         self.guest_client = Client()
-    
+
     def test_public_urls_exists_at_desired_location(self):
         """Проверка доступности общедоступных страниц."""
         urls = {
@@ -17,42 +18,3 @@ class PostURLTests(TestCase):
             with self.subTest(url=url):
                 self.assertEqual(
                     self.guest_client.get(url).status_code, expected)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
