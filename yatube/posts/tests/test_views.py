@@ -1,10 +1,11 @@
-from django import forms
 from django.contrib.auth import get_user_model
 from django.test import TestCase, Client
 
 from django.urls import reverse
-
-from posts.models import Group, Post
+from ..forms import PostForm
+from ..models import Group, Post
+from ..utils import paginator
+from ..views import NUMBER_OF_POSTS, PAGE_POSTS_OF_USER
 
 User = get_user_model()
 
@@ -52,29 +53,14 @@ class PostTests(TestCase):
     def test_post_create_show_correct_context(self):
         """Шаблон post_create сформирован с правильным контекстом."""
         response = self.authorized_client.get(reverse('posts:post_create'))
-        form_fields = {
-            'text': forms.fields.CharField,
-            'group': forms.fields.ChoiceField,
-        }
-
-        for value, expected in form_fields.items():
-            with self.subTest(value=value):
-                form_field = response.context['form'].fields[value]
-                self.assertIsInstance(form_field, expected)
+        self.assertIsInstance(response.context['form'], PostForm)
 
     def test_post_edit_show_correct_context(self):
-        """Шаблон posr_edit сформирован с правильным контекстом."""
+        """Шаблон post_edit сформирован с правильным контекстом."""
         url = reverse('posts:post_edit', kwargs={'post_id': PostTests.post.pk})
         response = self.authorized_client.get(url)
-        form_fields = {
-            'text': forms.fields.CharField,
-            'group': forms.fields.ChoiceField,
-        }
-
-        for value, expected in form_fields.items():
-            with self.subTest(value=value):
-                form_field = response.context['form'].fields[value]
-                self.assertIsInstance(form_field, expected)
+        self.assertIsInstance(response.context['form'], PostForm)
+        self.assertEqual(response.context['is_edit'], True)
 
     def test_post_detail_show_correct_context(self):
         """Шаблон post_detail сформирован с правильным контекстом."""
@@ -82,14 +68,7 @@ class PostTests(TestCase):
                       PostTests.post.pk})
         response = self.authorized_client.get(url)
         object = response.context['post']
-        fields = {
-            PostTests.post.text: object.text,
-            PostTests.user.username: object.author.username,
-        }
-
-        for expected, value in fields.items():
-            with self.subTest(value=value):
-                self.assertEqual(value, expected)
+        self.assertEqual(object, PostTests.post)
 
 
 class PaginatorViewsTest(TestCase):
@@ -118,6 +97,9 @@ class PaginatorViewsTest(TestCase):
         self.authorized_client.force_login(PaginatorViewsTest.user)
 
     def test_first_page_contains_ten_records(self):
+        '''
+        На первой странице каталога находится планируемое число записей.
+        '''
         url_and_length = {
             reverse('posts:index'): 10,
             reverse('posts:group_list', kwargs={'slug':
@@ -132,6 +114,9 @@ class PaginatorViewsTest(TestCase):
                 self.assertEqual(value, expected)
 
     def test_last_page_contains_ten_records(self):
+        '''
+        На последней странице каталога находится планируемое число записей.
+        '''
         url_and_length = {
             reverse('posts:index') + '?page=2': 3,
             reverse('posts:group_list', kwargs={'slug':
@@ -146,6 +131,7 @@ class PaginatorViewsTest(TestCase):
                 self.assertEqual(value, expected)
 
     def test_pages_contains_post_with_group(self):
+        '''На страницах отображается новый созданный пост.'''
         obj = Post.objects.create(
             author=PaginatorViewsTest.user,
             group=PaginatorViewsTest.group,
@@ -166,3 +152,40 @@ class PaginatorViewsTest(TestCase):
                 page_obj = response.context['page_obj']
                 list_of_objects_on_page = page_obj.object_list
                 self.assertIn(val, list_of_objects_on_page)
+
+    def test_index_show_correct_context(self):
+        """Шаблон index сформирован с правильным контекстом."""
+        url = reverse('posts:index')
+        response = self.authorized_client.get(url)
+        object = response.context['page_obj']
+        post_list = Post.objects.select_related('author', 'group').all()
+        page_obj = paginator(response.context['request'],
+                             post_list, NUMBER_OF_POSTS)
+        self.assertEqual(object.object_list, list(page_obj.object_list))
+        self.assertIsInstance(object, type(page_obj))
+
+    def test_group_show_correct_context(self):
+        """Шаблон group_list сформирован с правильным контекстом."""
+        url = reverse('posts:group_list', kwargs={'slug':
+                      PaginatorViewsTest.group.slug})
+        response = self.authorized_client.get(url)
+        object = response.context['page_obj']
+        group = Group.objects.get(slug=PaginatorViewsTest.group.slug)
+        post_list = group.posts.all()
+        page_obj = paginator(response.context['request'],
+                             post_list, NUMBER_OF_POSTS)
+        self.assertEqual(object.object_list, list(page_obj.object_list))
+        self.assertIsInstance(object, type(page_obj))
+
+    def test_profile_show_correct_context(self):
+        """Шаблон profile сформирован с правильным контекстом."""
+        url = reverse('posts:profile', kwargs={'username':
+                      PaginatorViewsTest.user.username})
+        response = self.authorized_client.get(url)
+        object = response.context['page_obj']
+        user = User.objects.get(username=PaginatorViewsTest.user.username)
+        post_list = user.posts.all()
+        page_obj = paginator(response.context['request'],
+                             post_list, PAGE_POSTS_OF_USER)
+        self.assertEqual(object.object_list, list(page_obj.object_list))
+        self.assertIsInstance(object, type(page_obj))

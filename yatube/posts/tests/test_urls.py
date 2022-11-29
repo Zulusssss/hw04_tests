@@ -63,6 +63,25 @@ class PostURLTests(TestCase):
                 self.assertEqual(
                     self.authorized_client.get(url).status_code, expected)
 
+    def test_guest_urls_not_exists_at_desired_location(self):
+        """
+        Проверка НЕдоступности страниц для НЕавторизированных пользователей.
+        """
+        urls = {
+            f'/posts/{PostURLTests.post.pk}/edit/':
+            (HTTPStatus.FOUND, reverse('users:login')
+             + f'?next=/posts/{PostURLTests.post.pk}/edit/', ),
+            '/create/':
+            (HTTPStatus.FOUND, reverse('users:login')
+             + '?next=/create/', ),
+        }
+        for url, expected in urls.items():
+            with self.subTest(url=url):
+                self.assertEqual(
+                    self.guest_client.get(url).status_code, expected[0])
+                self.assertRedirects(
+                    self.guest_client.get(url), expected[1])
+
     def test_urls_uses_correct_template(self):
         """URL-адрес использует соответствующий шаблон."""
         templates_url_names = {
@@ -83,5 +102,8 @@ class PostURLTests(TestCase):
                 self.assertTemplateUsed(response, template)
 
     def test_non_exist_url_404(self):
+        '''
+        Проверка возврата ошибки 404 на запрос с несуществующим URL.
+        '''
         self.assertEqual(self.guest_client.get('/bla-bla-bla/').status_code,
                          HTTPStatus.NOT_FOUND)

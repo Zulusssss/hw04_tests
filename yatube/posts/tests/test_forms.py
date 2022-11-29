@@ -28,6 +28,9 @@ class PostFormTests(TestCase):
         self.authorized_client.force_login(PostFormTests.user)
 
     def test_create_post(self):
+        '''
+        Проверка создания нового поста.
+        '''
         posts_count = Post.objects.count()
         form_data = {
             'text': 'Тестовое описание №1',
@@ -45,16 +48,19 @@ class PostFormTests(TestCase):
         self.assertEqual(Post.objects.count(), posts_count + 1)
         self.assertTrue(
             Post.objects.filter(
-                text='Тестовое описание №1',
-                group=PostFormTests.group.pk,
-                author=PostFormTests.user
+                text=form_data['text'],
+                group=form_data['group'],
+                author=form_data['author'],
             ).exists()
         )
 
     def test_edit_post(self):
+        '''
+        Проверка редактирования поста.
+        '''
         posts_count = Post.objects.count()
         form_data = {
-            'text': 'Тестовое описание №1',
+            'text': 'Тестовое описание №222',
             'group': PostFormTests.group.pk,
         }
         response = self.authorized_client.post(
@@ -69,7 +75,7 @@ class PostFormTests(TestCase):
         self.assertEqual(Post.objects.count(), posts_count)
         self.assertTrue(
             Post.objects.filter(
-                text='Тестовое описание №1',
+                text=form_data['text'],
                 group=PostFormTests.group.pk,
                 author=PostFormTests.user
             ).exists()

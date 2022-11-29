@@ -1,7 +1,7 @@
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 
-from ..models import Group, Post
+from ..models import Group, Post, NUMBER_OF_CHAR
 
 User = get_user_model()
 
@@ -30,7 +30,6 @@ class PostModelTest(TestCase):
 
         post = PostModelTest.post
         act = post.__str__()
-        NUMBER_OF_CHAR = 15
         expected = post.text[:NUMBER_OF_CHAR]
         self.assertEqual(act, expected,
                          '__str__ не выводит self.text[:NUMBER_OF_CHAR]')
